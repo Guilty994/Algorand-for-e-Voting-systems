@@ -1,0 +1,22 @@
+{
+  "name": "algorand-for-e-voting-systems",
+  "version": "1.0.0",
+  "description": "Thesis project",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Guilty994/Algorand-for-e-Voting-systems.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Guilty994/Algorand-for-e-Voting-systems/issues"
+  },
+  "homepage": "https://github.com/Guilty994/Algorand-for-e-Voting-systems#readme",
+  "dependencies": {
+    "algosdk": "^1.16.0"
+  }
+}
