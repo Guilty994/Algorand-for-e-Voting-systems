@@ -29,7 +29,7 @@ end
 # unset irrelevant variables
 deactivate nondestructive
 
-set -gx VIRTUAL_ENV "/home/domenicowsl2/progetto_tesi/Algorand-for-e-Voting-systems/venv"
+set -gx VIRTUAL_ENV "/home/d0m3/Algorand-for-e-Voting-systems/venv"
 
 set -gx _OLD_VIRTUAL_PATH $PATH
 set -gx PATH "$VIRTUAL_ENV/bin" $PATH
