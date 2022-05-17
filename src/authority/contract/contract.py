@@ -5,6 +5,7 @@ def approval_program():
     init = Seq(
         [
             App.globalPut(Bytes("ElectionAuthority"), Txn.sender()),
+            App.globalPut(Bytes("BallotsNumber"), Int(0)),
             Assert(Txn.application_args.length() == Int(4)),
             App.globalPut(Bytes("RegBegin"), Btoi(Txn.application_args[0])),
             App.globalPut(Bytes("RegEnd"), Btoi(Txn.application_args[1])),
@@ -20,14 +21,9 @@ def approval_program():
 
     get_registered_status = App.localGetEx(Int(0), App.id(), Bytes("registered"))
 
-    on_closeout = Seq(
-        [
-            get_vote_of_sender,
-            Approve(),
-        ]
-    )
+    is_ballot_generated = App.globalGet(Bytes("BallotsGenerated"))
 
-
+    
     on_register = Seq(
         # Check registraiton period
         [
@@ -74,6 +70,31 @@ def approval_program():
         ]
     )
 
+    on_generate_ballots = Seq(
+        [
+            Assert(
+                And(Txn.sender() == App.globalGet(Bytes("ElectionAuthority")),
+                    Global.latest_timestamp() >= App.globalGet(Bytes("RegBegin")),
+                    Global.latest_timestamp() <= App.globalGet(Bytes("RegEnd")) ,
+                    App.globalGet(Bytes("BallotsNumber")) == Int(0),
+                )
+            ),
+            #generate ballots
+            # ---
+            App.globalPut(Bytes("BallotsNumber"), Int(100000)),
+            Approve(),
+        ]
+    )
+
+    on_closeout = Seq(
+        [
+            get_vote_of_sender,
+            Approve(),
+        ]
+    )
+
+
+
     program = Cond(
         [Txn.application_id() == Int(0), init],
         [Txn.on_completion() == OnComplete.DeleteApplication, Return(is_electionAuthority)],
@@ -81,6 +102,7 @@ def approval_program():
         [Txn.on_completion() == OnComplete.CloseOut, on_closeout],
         [Txn.on_completion() == OnComplete.OptIn, on_register],
         [Txn.application_args[0] == Bytes("vote"), on_vote],
+        [Txn.application_args[0] == Bytes("generate_ballots"), on_generate_ballots],
     )
 
     return program
@@ -101,7 +123,7 @@ def clear_state_program():
                     App.globalGet(get_vote_of_sender.value()) - Int(1),
                 ),
             ),
-        Return(Int(1)),
+        Approve(),
         ]
     )
 
