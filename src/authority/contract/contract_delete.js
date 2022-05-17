@@ -18,7 +18,7 @@ export const deleteApp = async (senderAddress, senderAccount, index, client) => 
       await client.sendRawTransaction(signedTxn).do()
       // Wait for transaction to be confirmed
       const confirmedTxn = await algosdk.waitForConfirmation(client, txId, 4);
-      console.log("Confirmed " + confirmedTxn)
+      // console.log("Confirmed " + confirmedTxn)
 
       //Get the completed Transaction
       console.log("Transaction " + txId + " confirmed in round " + confirmedTxn["confirmed-round"]);

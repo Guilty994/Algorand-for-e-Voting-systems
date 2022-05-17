@@ -5,7 +5,7 @@ def approval_program():
     init = Seq(
         [
             App.globalPut(Bytes("ElectionAuthority"), Txn.sender()),
-            App.globalPut(Bytes("BallotsNumber"), Int(0)),
+            App.globalPut(Bytes("BallotID"), Int(0)),
             Assert(Txn.application_args.length() == Int(4)),
             App.globalPut(Bytes("RegBegin"), Btoi(Txn.application_args[0])),
             App.globalPut(Bytes("RegEnd"), Btoi(Txn.application_args[1])),
@@ -21,14 +21,12 @@ def approval_program():
 
     get_registered_status = App.localGetEx(Int(0), App.id(), Bytes("registered"))
 
-    is_ballot_generated = App.globalGet(Bytes("BallotsGenerated"))
-
-    
-    on_register = Seq(
+    on_registration = Seq(
         # Check registraiton period
         [
             Assert(
-                And(Global.latest_timestamp() >= App.globalGet(Bytes("RegBegin")),
+                And(App.globalGet(Bytes("BallotID")) > Int(0),
+                    Global.latest_timestamp() >= App.globalGet(Bytes("RegBegin")),
                     Global.latest_timestamp() <= App.globalGet(Bytes("RegEnd")) ,
                 )
             ),
@@ -53,12 +51,12 @@ def approval_program():
 
             # check if registered
             get_registered_status,
-            If( get_registered_status.hasValue(),
-                If( get_registered_status.value() == Int(0), 
-                    Reject()),
-                Reject(),
+            Assert(
+                And(get_registered_status.hasValue(),
+                    get_registered_status.value() == Int(1),
+                )
             ),
-        
+
             # check if already voted
             get_vote_of_sender,
             If(get_vote_of_sender.hasValue(), Return(Int(0))),
@@ -74,21 +72,41 @@ def approval_program():
         [
             Assert(
                 And(Txn.sender() == App.globalGet(Bytes("ElectionAuthority")),
-                    Global.latest_timestamp() >= App.globalGet(Bytes("RegBegin")),
-                    Global.latest_timestamp() <= App.globalGet(Bytes("RegEnd")) ,
-                    App.globalGet(Bytes("BallotsNumber")) == Int(0),
+                    App.globalGet(Bytes("BallotID")) == Int(0),
                 )
             ),
+            
+
             #generate ballots
-            # ---
-            App.globalPut(Bytes("BallotsNumber"), Int(100000)),
+            InnerTxnBuilder.Begin(),
+            InnerTxnBuilder.SetFields({
+                TxnField.type_enum: TxnType.AssetConfig,
+                TxnField.config_asset_total: Int(1000000),
+                TxnField.config_asset_decimals: Int(0),
+                TxnField.config_asset_default_frozen: Int(1),
+                TxnField.config_asset_unit_name: Bytes("ballot"),
+                TxnField.config_asset_name: Bytes("Ballots"),
+                TxnField.config_asset_url: Bytes("https://www.unisa.it/"),
+                TxnField.config_asset_manager: Global.current_application_address(),
+                TxnField.config_asset_reserve: Global.current_application_address(),
+                TxnField.config_asset_freeze: Global.current_application_address(),
+                TxnField.config_asset_clawback: Global.current_application_address()
+            }),
+            InnerTxnBuilder.Submit(),
+
+            App.globalPut(Bytes("BallotID"), InnerTxn.created_asset_id()),
             Approve(),
         ]
     )
 
     on_closeout = Seq(
         [
-            get_vote_of_sender,
+            Approve(),
+        ]
+    )
+
+    on_optin = Seq(
+        [
             Approve(),
         ]
     )
@@ -100,34 +118,18 @@ def approval_program():
         [Txn.on_completion() == OnComplete.DeleteApplication, Return(is_electionAuthority)],
         [Txn.on_completion() == OnComplete.UpdateApplication, Return(is_electionAuthority)],
         [Txn.on_completion() == OnComplete.CloseOut, on_closeout],
-        [Txn.on_completion() == OnComplete.OptIn, on_register],
-        [Txn.application_args[0] == Bytes("vote"), on_vote],
+        [Txn.on_completion() == OnComplete.OptIn, on_optin],
         [Txn.application_args[0] == Bytes("generate_ballots"), on_generate_ballots],
+        [Txn.application_args[0] == Bytes("registration"), on_registration],
+        [Txn.application_args[0] == Bytes("vote"), on_vote],
     )
 
     return program
 
 
 def clear_state_program():
-    get_vote_of_sender = App.localGetEx(Int(0), App.id(), Bytes("voted"))
-    program = Seq(
-        [
-            get_vote_of_sender,
-            If(
-                And(
-                    Global.round() <= App.globalGet(Bytes("VoteEnd")),# andrebbe fatto >= per evitare che l'app è chiusa prima che la votazione finisce
-                    get_vote_of_sender.hasValue(),
-                ),
-                App.globalPut(
-                    get_vote_of_sender.value(),
-                    App.globalGet(get_vote_of_sender.value()) - Int(1),
-                ),
-            ),
-        Approve(),
-        ]
-    )
 
-    return program
+    return Approve()#for now not needed
 
 
 if __name__ == "__main__":

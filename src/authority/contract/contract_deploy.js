@@ -28,7 +28,7 @@ export const createApp = async (senderAddress, senderAccount,
         // Wait for transaction to be confirmed
         let confirmedTxn = await algosdk.waitForConfirmation(client, txId, 4);
 
-        console.log("Confirmed " + confirmedTxn.toString());
+        //console.log("Confirmed " + confirmedTxn.toString());
 
         //Get the completed Transaction
         console.log("Transaction " + txId + " confirmed in round " + confirmedTxn["confirmed-round"]);
