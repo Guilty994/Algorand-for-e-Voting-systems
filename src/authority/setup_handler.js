@@ -1,14 +1,20 @@
 import * as fs from 'fs';
-import { applicationAddress, lunchClient } from './utils.js';
-import { createApp } from './contract/contract_deploy.js';
-import { optin, generateBallots } from './ballot_handler.js';
 import algosdk from 'algosdk';
 import dotenv from 'dotenv';
 import chalk from 'chalk';
-import {foundSmartContract} from './contract/contract_add_found.js'
+
+import { applicationAddress, lunchClient } from '../utils/utils.js';
+import { foundSmartContract } from '../contract/contract_add_founds.js'
+import {init, optin, generateBallots} from '../contract/contract_actions.js' 
+
 dotenv.config()
 
-// Compile Program
+/**
+ * 
+ * @param {*} client 
+ * @param {*} programSource 
+ * @returns 
+ */
 const compileProgram = async (client, programSource) => {
     let encoder = new TextEncoder();
     let programBytes = encoder.encode(programSource);
@@ -18,6 +24,12 @@ const compileProgram = async (client, programSource) => {
     return compiledBytes;
 }
 
+/**
+ * 
+ * @param {*} electAuthAccount 
+ * @param {*} elecAuthAddress 
+ * @returns 
+ */
 export const setup = async (electAuthAccount, elecAuthAddress) => {
 
     let client = await lunchClient();
@@ -34,8 +46,8 @@ export const setup = async (electAuthAccount, elecAuthAddress) => {
     let clear_state_program = ''
 
     try {
-        approvalProgram = fs.readFileSync('./src/authority/contract/artifacts/vote_approval.teal', 'utf8')
-        clear_state_program = fs.readFileSync('./src/authority/contract/artifacts/vote_clear_state.teal', 'utf8')
+        approvalProgram = fs.readFileSync('./src/contract/artifacts/vote_approval.teal', 'utf8')
+        clear_state_program = fs.readFileSync('./src/contract/artifacts/vote_clear_state.teal', 'utf8')
     } catch (err) {
         console.error(err)
 
@@ -68,19 +80,19 @@ export const setup = async (electAuthAccount, elecAuthAddress) => {
 
     // Create new application
     console.group(chalk.blue("CREATEAPP (createApp)"))
-    const appId = await createApp(elecAuthAddress, electAuthAccount, approval_program, clear_program, localInts, localBytes, globalInts, globalBytes, appArgs, client)
+    //const appId = await createApp(electAuthAccount, approval_program, clear_program, localInts, localBytes, globalInts, globalBytes, appArgs, client)
+    const appId = await init(electAuthAccount, approval_program, clear_program, localInts, localBytes, globalInts, globalBytes, appArgs, client)
     console.groupEnd("CREATEAPP (createApp)")
 
     // Found the smart contract
     console.group(chalk.blue("ADD FOUND TO SMART CONTRACT (foundSmartContract)"))
     let appaddr = applicationAddress(appId, client);
-    await foundSmartContract(elecAuthAddress, electAuthAccount, appaddr, client);
+    await foundSmartContract(electAuthAccount, appaddr, client);
     console.groupEnd("ADD FOUND TO SMART CONTRACT (foundSmartContract)")
 
     // Generate ballots
-    console.group(chalk.blue("GENERATE BALLOTS (optin, generateBallots)"))
-    await optin(elecAuthAddress, electAuthAccount, appId, client);
-    await generateBallots(elecAuthAddress, electAuthAccount, appId, client);
+    console.group(chalk.blue("GENERATE BALLOTS (generateBallots)"))
+    await generateBallots(electAuthAccount, appId, client);
     console.groupEnd("GENERATE BALLOTS (optin, generateBallots)")
 
     return appId

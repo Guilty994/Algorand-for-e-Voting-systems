@@ -1,10 +1,19 @@
-//READ STATE
-
+/**
+ * Utils functions
+ */
 // https://developer.algorand.org/docs/get-details/encoding/
 
 import algosdk from "algosdk";
+import fs from 'fs';
+import chalk from "chalk";
 
-// read local state of application from user account
+/**
+ * Read the provided @account local state of the @index smart contract.
+ * @param {*} index 
+ * @param {*} account 
+ * @param {*} client 
+ * @returns 
+ */
 export const readLocalState = async (index, account, client) => {
     try {
         let accountInfoResponse = await client.accountInformation(account.addr).do();
@@ -26,7 +35,11 @@ export const readLocalState = async (index, account, client) => {
 }
 
 
-// read global state of application
+/**
+ * Read the @index smart contract global state.
+ * @param {*} index 
+ * @param {*} client 
+ */
 export const readGlobalState = async (index, client) => {
     try {
         let applicationInfoResponse = await client.getApplicationByID(index).do();
@@ -44,6 +57,11 @@ export const readGlobalState = async (index, client) => {
     }
 }
 
+/**
+ * Return the smart contract address for the provided @appID
+ * @param {*} appID 
+ * @returns Smart contract address
+ */
 export function applicationAddress(appID) {
     try {
         let value = algosdk.getApplicationAddress(appID);
@@ -56,7 +74,11 @@ export function applicationAddress(appID) {
 }
 
 
-// Client connection /w Purestake
+
+/**
+ * Setup a client connect /w Purestake
+ * @returns The client object
+ */
 export const lunchClient = async () => {
 
     const algodServer = process.env.BASESERVER;
@@ -67,4 +89,19 @@ export const lunchClient = async () => {
 
 
     return client
+}
+
+/**
+ * Utils function to generate detailed debug report
+ * @param {*} functionName 
+ * @param {*} err 
+ */
+export const generateDebugLog = (functionName, err) =>{
+    try {
+        let ts = Date.now();
+        console.log(chalk.bgRedBright((functionName+" failed, detailed report can be found in debug/") +ts+ ".txt"))
+        fs.writeFileSync('./debug/'+ts+'.txt', err.toString());
+    } catch (err1) {
+        console.error(err1);
+    }
 }

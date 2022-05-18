@@ -19,10 +19,12 @@
   "homepage": "https://github.com/Guilty994/Algorand-for-e-Voting-systems#readme",
   "dependencies": {
     "algosdk": "^1.16.0",
+    "chai-as-promised": "^7.1.1",
     "chalk": "^5.0.1",
     "dotenv": "^16.0.1"
   },
   "devDependencies": {
+    "@types/chai-as-promised": "^7.1.5",
     "chai": "^4.3.6",
     "mocha": "^10.0.0"
   }

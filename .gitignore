@@ -1,2 +1,5 @@
 venv/
 node_modules/
+debug/
+log.txt
+src/examples
