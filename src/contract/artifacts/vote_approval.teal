@@ -2,37 +2,45 @@
 txn ApplicationID
 int 0
 ==
-bnz main_l20
+bnz main_l24
 txn OnCompletion
 int DeleteApplication
 ==
-bnz main_l19
+bnz main_l23
 txn OnCompletion
 int UpdateApplication
 ==
-bnz main_l18
+bnz main_l22
 txn OnCompletion
 int CloseOut
 ==
-bnz main_l17
+bnz main_l21
 txn OnCompletion
 int OptIn
 ==
-bnz main_l16
+bnz main_l20
 txna ApplicationArgs 0
 byte "generate_ballots"
 ==
-bnz main_l15
+bnz main_l19
+txna ApplicationArgs 0
+byte "optin_asset"
+==
+bnz main_l18
+txna ApplicationArgs 0
+byte "add_candidate"
+==
+bnz main_l17
 txna ApplicationArgs 0
 byte "registration"
 ==
-bnz main_l12
+bnz main_l14
 txna ApplicationArgs 0
 byte "vote"
 ==
-bnz main_l9
+bnz main_l11
 err
-main_l9:
+main_l11:
 global LatestTimestamp
 byte "VoteBegin"
 app_global_get
@@ -62,7 +70,7 @@ app_local_get_ex
 store 1
 store 0
 load 1
-bnz main_l11
+bnz main_l13
 txna ApplicationArgs 1
 txna ApplicationArgs 1
 app_global_get
@@ -75,10 +83,10 @@ txna ApplicationArgs 1
 app_local_put
 int 1
 return
-main_l11:
+main_l13:
 int 0
 return
-main_l12:
+main_l14:
 byte "BallotID"
 app_global_get
 int 0
@@ -101,17 +109,48 @@ app_local_get_ex
 store 3
 store 2
 load 3
-bnz main_l14
+bnz main_l16
 int 0
 byte "registered"
 int 1
 app_local_put
 int 1
 return
-main_l14:
+main_l16:
 int 0
 return
-main_l15:
+main_l17:
+txn NumAppArgs
+int 1
+==
+txn Sender
+byte "ElectionAuthority"
+app_global_get
+==
+&&
+assert
+int 1
+return
+main_l18:
+txn Sender
+byte "ElectionAuthority"
+app_global_get
+==
+assert
+itxn_begin
+int axfer
+itxn_field TypeEnum
+global CurrentApplicationAddress
+itxn_field AssetReceiver
+int 0
+itxn_field AssetAmount
+byte "BallotID"
+app_global_get
+itxn_field XferAsset
+itxn_submit
+int 1
+return
+main_l19:
 txn Sender
 byte "ElectionAuthority"
 app_global_get
@@ -151,25 +190,25 @@ itxn CreatedAssetID
 app_global_put
 int 1
 return
-main_l16:
-int 1
-return
-main_l17:
-int 1
-return
-main_l18:
-txn Sender
-byte "ElectionAuthority"
-app_global_get
-==
-return
-main_l19:
-txn Sender
-byte "ElectionAuthority"
-app_global_get
-==
-return
 main_l20:
+int 1
+return
+main_l21:
+int 1
+return
+main_l22:
+txn Sender
+byte "ElectionAuthority"
+app_global_get
+==
+return
+main_l23:
+txn Sender
+byte "ElectionAuthority"
+app_global_get
+==
+return
+main_l24:
 byte "ElectionAuthority"
 txn Sender
 app_global_put

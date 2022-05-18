@@ -5,7 +5,7 @@ import chalk from 'chalk';
 
 import { applicationAddress, lunchClient } from '../utils/utils.js';
 import { foundSmartContract } from '../contract/contract_add_founds.js'
-import {init, optin, generateBallots} from '../contract/contract_actions.js' 
+import {init, optin, generateBallots, optinAsset} from '../contract/contract_actions.js' 
 
 dotenv.config()
 
@@ -26,11 +26,10 @@ const compileProgram = async (client, programSource) => {
 
 /**
  * 
- * @param {*} electAuthAccount 
- * @param {*} elecAuthAddress 
+ * @param {*} electAuthAccount
  * @returns 
  */
-export const setup = async (electAuthAccount, elecAuthAddress) => {
+export const setup = async (electAuthAccount) => {
 
     let client = await lunchClient();
     //SMART CONTRACT DEPLOYMENT
@@ -81,19 +80,25 @@ export const setup = async (electAuthAccount, elecAuthAddress) => {
     // Create new application
     console.group(chalk.blue("CREATEAPP (createApp)"))
     //const appId = await createApp(electAuthAccount, approval_program, clear_program, localInts, localBytes, globalInts, globalBytes, appArgs, client)
-    const appId = await init(electAuthAccount, approval_program, clear_program, localInts, localBytes, globalInts, globalBytes, appArgs, client)
+    let appID = await init(electAuthAccount, approval_program, clear_program, localInts, localBytes, globalInts, globalBytes, appArgs, client)
     console.groupEnd("CREATEAPP (createApp)")
 
     // Found the smart contract
     console.group(chalk.blue("ADD FOUND TO SMART CONTRACT (foundSmartContract)"))
-    let appaddr = applicationAddress(appId, client);
+    let appaddr = applicationAddress(appID, client);
     await foundSmartContract(electAuthAccount, appaddr, client);
     console.groupEnd("ADD FOUND TO SMART CONTRACT (foundSmartContract)")
 
     // Generate ballots
     console.group(chalk.blue("GENERATE BALLOTS (generateBallots)"))
-    await generateBallots(electAuthAccount, appId, client);
-    console.groupEnd("GENERATE BALLOTS (optin, generateBallots)")
+    let ballotID = await generateBallots(electAuthAccount, appID, client);
+    console.groupEnd("GENERATE BALLOTS (generateBallots)")
 
-    return appId
+
+    // Optin into ballots
+    console.group(chalk.blue("OPTIN BALLOTS (optinAsset)"))
+    await optinAsset(electAuthAccount, appID, ballotID, client)
+    console.groupEnd("OPTIN BALLOTS (optinAsset)")
+
+    return {appID, ballotID}
 }

@@ -105,12 +105,41 @@ def approval_program():
         ]
     )
 
+   
     on_optin = Seq(
         [
             Approve(),
         ]
     )
 
+    on_add_candidate = Seq(
+        [
+            Assert(
+                And(
+                    Txn.application_args.length() == Int(1),
+                    Txn.sender() == App.globalGet(Bytes("ElectionAuthority")),
+                )
+            ),
+            Approve(),
+        ]
+    )
+
+    #optin the asset to start using it
+    on_optin_asset = Seq(
+        [
+            Assert(Txn.sender() == App.globalGet(Bytes("ElectionAuthority"))),
+
+            InnerTxnBuilder.Begin(),
+            InnerTxnBuilder.SetFields({
+                TxnField.type_enum: TxnType.AssetTransfer,
+                TxnField.asset_receiver: Global.current_application_address(),
+                TxnField.asset_amount: Int(0),
+                TxnField.xfer_asset: Txn.assets[0],
+            }),
+            InnerTxnBuilder.Submit(),
+            Approve(),
+        ]
+    )
 
 
     program = Cond(
@@ -120,8 +149,12 @@ def approval_program():
         [Txn.on_completion() == OnComplete.CloseOut, on_closeout],
         [Txn.on_completion() == OnComplete.OptIn, on_optin],
         [Txn.application_args[0] == Bytes("generate_ballots"), on_generate_ballots],
+        [Txn.application_args[0] == Bytes("optin_asset"), on_optin_asset],
+        [Txn.application_args[0] == Bytes("add_candidate"), on_add_candidate],
         [Txn.application_args[0] == Bytes("registration"), on_registration],
         [Txn.application_args[0] == Bytes("vote"), on_vote],
+        
+        
     )
 
     return program
