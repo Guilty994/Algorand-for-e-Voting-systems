@@ -1,5 +1,4 @@
 from pyteal import *
-#logic is wrong on checking current round for register/voting period
 
 def approval_program():
     init = Seq(
@@ -19,19 +18,24 @@ def approval_program():
 
     get_vote_of_sender = App.localGetEx(Int(0), App.id(), Bytes("voted"))
 
-    get_registered_status = App.localGetEx(Int(0), App.id(), Bytes("registered"))
+    get_registered_status = App.localGet(Int(0), Bytes("registered"))
+
+    account_asset_balance = AssetHolding.balance(Txn.sender(), Txn.assets[0])
 
     on_registration = Seq(
-        # Check registraiton period
         [
+            account_asset_balance,
             Assert(
-                And(App.globalGet(Bytes("BallotID")) > Int(0),
-                    Global.latest_timestamp() >= App.globalGet(Bytes("RegBegin")),
+                And(Txn.application_args.length() == Int(1),
+                    App.globalGet(Bytes("BallotID")) > Int(0),# check that the smart contract has initialized the assets
+                    Global.latest_timestamp() >= App.globalGet(Bytes("RegBegin")),# Check the registration period
                     Global.latest_timestamp() <= App.globalGet(Bytes("RegEnd")) ,
+                    Txn.assets[0] == App.globalGet(Bytes("BallotID")),# check that the asset is correct
+                    account_asset_balance.hasValue(),  # check if the sender has opted into the asset (BALLOT)
+                    account_asset_balance.value() == Int(1), # check if the sender has an asset (BALLOT)
+                    App.localGet(Int(0), Bytes("registered")) == Int(0), # check that the user isn't registered yet
                 )
             ),
-            get_registered_status,
-            If(get_registered_status.hasValue(), Reject()),
             App.localPut(Int(0), Bytes("registered"), Int(1)),#1 = yes 0 = no
             Approve(),
         ]
@@ -44,18 +48,19 @@ def approval_program():
         [
             # check voting period
             Assert(
-                And(Global.latest_timestamp() >= App.globalGet(Bytes("VoteBegin")),
+                And(Txn.application_args.length() == Int(2),
+                    Global.latest_timestamp() >= App.globalGet(Bytes("VoteBegin")),
                     Global.latest_timestamp() <= App.globalGet(Bytes("VoteEnd")) ,
                 )
             ),
 
             # check if registered
-            get_registered_status,
-            Assert(
-                And(get_registered_status.hasValue(),
-                    get_registered_status.value() == Int(1),
-                )
-            ),
+            # get_registered_status,
+            # Assert(
+            #     And(get_registered_status.hasValue(),
+            #         get_registered_status.value() == Int(1),
+            #     )
+            # ),
 
             # check if already voted
             get_vote_of_sender,
@@ -71,7 +76,8 @@ def approval_program():
     on_generate_ballots = Seq(
         [
             Assert(
-                And(Txn.sender() == App.globalGet(Bytes("ElectionAuthority")),
+                And(Txn.application_args.length() == Int(1),
+                    Txn.sender() == App.globalGet(Bytes("ElectionAuthority")),
                     App.globalGet(Bytes("BallotID")) == Int(0),
                 )
             ),
@@ -90,7 +96,7 @@ def approval_program():
                 TxnField.config_asset_manager: Global.current_application_address(),
                 TxnField.config_asset_reserve: Global.current_application_address(),
                 TxnField.config_asset_freeze: Global.current_application_address(),
-                TxnField.config_asset_clawback: Global.current_application_address()
+                TxnField.config_asset_clawback: Txn.sender()
             }),
             InnerTxnBuilder.Submit(),
 
@@ -105,29 +111,26 @@ def approval_program():
         ]
     )
 
-   
+    # The optin is used to initialized the local status for the account in the smart contract 
     on_optin = Seq(
         [
+            Assert(Txn.application_args.length() == Int(0)),
+
+            # Setup the local status for each voter
+            App.localPut(Int(0), Bytes("registered"), Int(0)),
             Approve(),
         ]
     )
 
-    on_add_candidate = Seq(
+    # Smart contract opton into asset to start using it (it is required by Algorand policy)
+    on_optin_asset = Seq(
         [
             Assert(
                 And(
                     Txn.application_args.length() == Int(1),
                     Txn.sender() == App.globalGet(Bytes("ElectionAuthority")),
-                )
-            ),
-            Approve(),
-        ]
-    )
-
-    #optin the asset to start using it
-    on_optin_asset = Seq(
-        [
-            Assert(Txn.sender() == App.globalGet(Bytes("ElectionAuthority"))),
+                    )
+                ),
 
             InnerTxnBuilder.Begin(),
             InnerTxnBuilder.SetFields({
@@ -142,6 +145,7 @@ def approval_program():
     )
 
 
+
     program = Cond(
         [Txn.application_id() == Int(0), init],
         [Txn.on_completion() == OnComplete.DeleteApplication, Return(is_electionAuthority)],
@@ -150,10 +154,8 @@ def approval_program():
         [Txn.on_completion() == OnComplete.OptIn, on_optin],
         [Txn.application_args[0] == Bytes("generate_ballots"), on_generate_ballots],
         [Txn.application_args[0] == Bytes("optin_asset"), on_optin_asset],
-        [Txn.application_args[0] == Bytes("add_candidate"), on_add_candidate],
         [Txn.application_args[0] == Bytes("registration"), on_registration],
         [Txn.application_args[0] == Bytes("vote"), on_vote],
-        
         
     )
 

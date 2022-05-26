@@ -3,9 +3,8 @@ import algosdk from 'algosdk';
 import dotenv from 'dotenv';
 import chalk from 'chalk';
 
-import { applicationAddress, lunchClient } from '../utils/utils.js';
-import { foundSmartContract } from '../contract/contract_add_founds.js'
-import {init, optin, generateBallots, optinAsset} from '../contract/contract_actions.js' 
+import { applicationAddress, lunchClient, sendAsset, foundSmartContract} from '../utils/utils.js';
+import {init, generateBallots, optinAsset} from '../contract/contract_actions.js' 
 
 dotenv.config()
 
@@ -29,16 +28,17 @@ const compileProgram = async (client, programSource) => {
  * @param {*} electAuthAccount
  * @returns 
  */
-export const setup = async (electAuthAccount) => {
+export const debugSetup = async (electAuthAccount) => {//TODO: Modularizzare sta roba e portarla nei file di test
 
+    console.group(chalk.bgGreenBright("VOTING SETUP"));
     let client = await lunchClient();
     //SMART CONTRACT DEPLOYMENT
 
     // declare application state storage (immutable)
-    const localInts = 0;
-    const localBytes = 2; // local choice, local reg status
-    const globalInts = 25; //# 5 for setup + 20 for choices. Use a larger number for more choices.
-    const globalBytes = 1; // EA address, ballot generation status
+    const localInts = 1;
+    const localBytes = 1; // vote, registered status
+    const globalInts = 25; // 5 for setup + 20 for result publication.
+    const globalBytes = 1; // EA address, 
 
     // Read Teal File
     let approvalProgram = ''
@@ -64,8 +64,8 @@ export const setup = async (electAuthAccount) => {
     let VoteBegin = RegEnd + 86400;
     let VoteEnd = VoteBegin + 86400;
 
-    console.log(`Registration from: ${RegBegin} to ${RegEnd}`)
-    console.log(`Vote from: ${VoteBegin} to ${VoteEnd}`)
+    console.log(`Registration from: ${RegBegin} To: ${RegEnd}`)
+    console.log(`Vote from: ${VoteBegin} To: ${VoteEnd}`)
 
     // create list of bytes for app args
     let appArgs = [];
@@ -78,27 +78,32 @@ export const setup = async (electAuthAccount) => {
     )
 
     // Create new application
-    console.group(chalk.blue("CREATEAPP (createApp)"))
+    console.group(chalk.blue("INIT SMART CONTRACT (EA->SC)"))
     //const appId = await createApp(electAuthAccount, approval_program, clear_program, localInts, localBytes, globalInts, globalBytes, appArgs, client)
     let appID = await init(electAuthAccount, approval_program, clear_program, localInts, localBytes, globalInts, globalBytes, appArgs, client)
-    console.groupEnd("CREATEAPP (createApp)")
+    console.groupEnd("INIT SMART CONTRACT (EA->SC)")
 
     // Found the smart contract
-    console.group(chalk.blue("ADD FOUND TO SMART CONTRACT (foundSmartContract)"))
+    console.group(chalk.blue("ADD FOUND TO SMART CONTRACT (EA->SC)"))
     let appaddr = applicationAddress(appID, client);
     await foundSmartContract(electAuthAccount, appaddr, client);
-    console.groupEnd("ADD FOUND TO SMART CONTRACT (foundSmartContract)")
+    console.groupEnd("ADD FOUND TO SMART CONTRACT (EA->SC)")
 
     // Generate ballots
-    console.group(chalk.blue("GENERATE BALLOTS (generateBallots)"))
+    console.group(chalk.blue("GENERATE BALLOTS (EA->SC)"))
     let ballotID = await generateBallots(electAuthAccount, appID, client);
-    console.groupEnd("GENERATE BALLOTS (generateBallots)")
+    console.groupEnd("GENERATE BALLOTS (EA->SC)")
 
 
     // Optin into ballots
-    console.group(chalk.blue("OPTIN BALLOTS (optinAsset)"))
+    console.group(chalk.blue("OPTIN ASSET \"BALLOTS\" (EA->SC)"))
     await optinAsset(electAuthAccount, appID, ballotID, client)
-    console.groupEnd("OPTIN BALLOTS (optinAsset)")
+    console.groupEnd("OPTIN ASSET \"BALLOTS\" (EA->SC)")
+    console.group(chalk.blue("OPTIN ASSET \"BALLOTS\" (EA)"))
+    await sendAsset(electAuthAccount, electAuthAccount, ballotID, 0, client)
+    console.groupEnd("OPTIN ASSET \"BALLOTS\" (EA)")
 
+
+    console.groupEnd("VOTING SETUP");
     return {appID, ballotID}
 }
