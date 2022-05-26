@@ -3,7 +3,7 @@
  */
 
 import { debugSetup } from "../src/authority/setup_handler.js";
-import { deleteApplication, optin, generateBallots, optinAsset } from "../src/contract/contract_actions.js";
+import { deleteApplication, optin, generateBallots, smartContractOptinAsset } from "../src/contract/contract_actions.js";
 import { lunchClient, readGlobalState } from "../src/utils/utils.js";
 import algosdk from 'algosdk';
 import dotenv from 'dotenv';

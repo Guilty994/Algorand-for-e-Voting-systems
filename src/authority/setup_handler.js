@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import chalk from 'chalk';
 
 import { applicationAddress, lunchClient, sendAsset, foundSmartContract} from '../utils/utils.js';
-import {init, generateBallots, optinAsset} from '../contract/contract_actions.js' 
+import {init, generateBallots, smartContractOptinAsset} from '../contract/contract_actions.js' 
 
 dotenv.config()
 
@@ -97,11 +97,11 @@ export const debugSetup = async (electAuthAccount) => {//TODO: Modularizzare sta
 
     // Optin into ballots
     console.group(chalk.blue("OPTIN ASSET \"BALLOTS\" (EA->SC)"))
-    await optinAsset(electAuthAccount, appID, ballotID, client)
+    await smartContractOptinAsset(electAuthAccount, appID, ballotID, client)
     console.groupEnd("OPTIN ASSET \"BALLOTS\" (EA->SC)")
-    console.group(chalk.blue("OPTIN ASSET \"BALLOTS\" (EA)"))
+    console.group(chalk.blue("OPTIN ASSET \"BALLOTS\" (EA->ALGORAND)"))
     await sendAsset(electAuthAccount, electAuthAccount, ballotID, 0, client)
-    console.groupEnd("OPTIN ASSET \"BALLOTS\" (EA)")
+    console.groupEnd("OPTIN ASSET \"BALLOTS\" (EA->ALGORAND)")
 
 
     console.groupEnd("VOTING SETUP");

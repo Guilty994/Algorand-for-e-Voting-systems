@@ -1,4 +1,4 @@
-import { clawBackAsset, getSmartContractAddress } from "../utils/utils.js";
+import { confirmIdentity } from "../contract/contract_actions.js";
 import dotenv from 'dotenv';
 import chalk from 'chalk';
 
@@ -6,8 +6,14 @@ dotenv.config()
 
 export const acceptRegistration = async (electAuthAccount, voterAddress, appID, ballotID, client) => {
 
-    console.group(chalk.blueBright("ACCEPT REGISTRATION REQUEST (EA)"))
-    let smartContractAddress = await getSmartContractAddress(appID)
-    await clawBackAsset(electAuthAccount, smartContractAddress, voterAddress, ballotID, 1, client)
-    console.groupEnd(chalk.blueBright("ACCEPT REGISTRATION REQUEST (EA)"))
+    // DO CHECKS 
+
+
+    // ---
+
+    // Accept
+
+    console.group(chalk.blueBright("CONFIRM VOTER IDENTITY (EA->SC)"))
+    await confirmIdentity(electAuthAccount, voterAddress, appID, ballotID, client)
+    console.groupEnd(chalk.blueBright("CONFIRM VOTER IDENTIT (EA->SC)"))
 }

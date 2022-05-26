@@ -24,7 +24,7 @@ byte "generate_ballots"
 ==
 bnz main_l15
 txna ApplicationArgs 0
-byte "optin_asset"
+byte "sc_optin_asset"
 ==
 bnz main_l14
 txna ApplicationArgs 0
@@ -32,14 +32,38 @@ byte "registration"
 ==
 bnz main_l13
 txna ApplicationArgs 0
+byte "confirm_identity"
+==
+bnz main_l12
+txna ApplicationArgs 0
 byte "vote"
 ==
-bnz main_l10
+bnz main_l11
 err
-main_l10:
+main_l11:
+int 0
+global CurrentApplicationID
+byte "encrypted_vote"
+app_local_get_ex
+store 1
+store 0
+txn Sender
+txna Assets 0
+asset_holding_get AssetBalance
+store 3
+store 2
 txn NumAppArgs
 int 2
 ==
+txn NumAccounts
+int 1
+==
+&&
+txna Accounts 1
+byte "ElectionAuthority"
+app_global_get
+==
+&&
 global LatestTimestamp
 byte "VoteBegin"
 app_global_get
@@ -50,29 +74,103 @@ byte "VoteEnd"
 app_global_get
 <=
 &&
-assert
-int 0
-global CurrentApplicationID
-byte "voted"
-app_local_get_ex
-store 1
-store 0
-load 1
-bnz main_l12
-txna ApplicationArgs 1
-txna ApplicationArgs 1
+txna Assets 0
+byte "BallotID"
 app_global_get
+==
+&&
+load 3
+&&
+load 2
 int 1
-+
-app_global_put
+==
+&&
 int 0
-byte "voted"
+byte "registered"
+app_local_get
+int 1
+==
+&&
+load 1
+int 0
+==
+&&
+assert
+itxn_begin
+int axfer
+itxn_field TypeEnum
+txna Accounts 1
+itxn_field AssetReceiver
+txn Sender
+itxn_field AssetSender
+int 1
+itxn_field AssetAmount
+txna Assets 0
+itxn_field XferAsset
+itxn_submit
+int 0
+byte "encrypted_vote"
 txna ApplicationArgs 1
 app_local_put
 int 1
 return
 main_l12:
+txna Accounts 1
+txna Assets 0
+asset_holding_get AssetBalance
+store 5
+store 4
+txn NumAppArgs
+int 1
+==
+txn NumAccounts
+int 1
+==
+&&
+txn NumAssets
+int 1
+==
+&&
+byte "BallotID"
+app_global_get
 int 0
+!=
+&&
+global LatestTimestamp
+byte "RegBegin"
+app_global_get
+>=
+&&
+global LatestTimestamp
+byte "RegEnd"
+app_global_get
+<=
+&&
+txna Assets 0
+byte "BallotID"
+app_global_get
+==
+&&
+load 5
+&&
+load 4
+int 0
+==
+&&
+assert
+itxn_begin
+int axfer
+itxn_field TypeEnum
+txna Accounts 1
+itxn_field AssetReceiver
+global CurrentApplicationAddress
+itxn_field AssetSender
+int 1
+itxn_field AssetAmount
+txna Assets 0
+itxn_field XferAsset
+itxn_submit
+int 1
 return
 main_l13:
 txn Sender
@@ -86,7 +184,7 @@ int 1
 byte "BallotID"
 app_global_get
 int 0
->
+!=
 &&
 global LatestTimestamp
 byte "RegBegin"
@@ -131,6 +229,11 @@ byte "ElectionAuthority"
 app_global_get
 ==
 &&
+byte "BallotID"
+app_global_get
+int 0
+!=
+&&
 assert
 itxn_begin
 int axfer
@@ -168,7 +271,7 @@ int 0
 itxn_field ConfigAssetDecimals
 int 1
 itxn_field ConfigAssetDefaultFrozen
-byte "ballot"
+byte "blt"
 itxn_field ConfigAssetUnitName
 byte "Ballots"
 itxn_field ConfigAssetName
@@ -180,9 +283,14 @@ global CurrentApplicationAddress
 itxn_field ConfigAssetReserve
 global CurrentApplicationAddress
 itxn_field ConfigAssetFreeze
-txn Sender
+global CurrentApplicationAddress
 itxn_field ConfigAssetClawback
 itxn_submit
+byte "BallotID"
+app_global_get
+int 0
+==
+assert
 byte "BallotID"
 itxn CreatedAssetID
 app_global_put
