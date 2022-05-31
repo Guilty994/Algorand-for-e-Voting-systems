@@ -70,18 +70,18 @@ export const main = async () => {
     // Simulate voters vote
     console.group(chalk.bgGreenBright("VOTING"))
     console.group(chalk.bgCyanBright("VOTER 1"))
-    const choiceVoter1 = {candidate_id: '1'}
+    const choiceVoter1 = {candidate_id: '420'}
     console.log("Plain text vote: ", choiceVoter1)
     await voteRequest(voterAccount1, returnedIDs.appID, returnedIDs.ballotID, choiceVoter1, client);
     console.groupEnd("VOTER 1")
     console.group(chalk.bgCyanBright("VOTER 2"))
-    const choiceVoter2 = {candidate_id: '1'}
+    const choiceVoter2 = {candidate_id: '99999'}
     console.log("Plain text vote: ", choiceVoter2)
     await voteRequest(voterAccount2, returnedIDs.appID, returnedIDs.ballotID, choiceVoter2, client);
     console.groupEnd("VOTING PROCESS VOTER 2")
     console.groupEnd("VOTER 2")
     console.group(chalk.bgCyanBright("VOTER 3"))
-    const choiceVoter3 = {candidate_id: '3'}
+    const choiceVoter3 = {candidate_id: '420'}
     console.log("Plain text vote: ", choiceVoter3)
     await voteRequest(voterAccount3, returnedIDs.appID, returnedIDs.ballotID, choiceVoter3, client);
     console.groupEnd("VOTER 3")

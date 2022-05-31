@@ -356,18 +356,18 @@ export const vote = async (senderAccount, EAAddress, appID, assetID, encryptedVo
         // display results
         let transactionResponse = await client.pendingTransactionInformation(txId).do();
         console.log("Called app-id:", transactionResponse['txn']['txn']['apid'])
-        if (transactionResponse['global-state-delta'] !== undefined) {
-            console.log("Global State updated:", transactionResponse['global-state-delta']);
-            const decoded_key = Buffer.from(transactionResponse['global-state-delta'][0]['key'], "base64").toString();
-            console.log("key: " + decoded_key);
-            console.log("uint: " + transactionResponse['global-state-delta'][0]['value']['uint']);
-        }
         if (transactionResponse['local-state-delta'] !== undefined) {
-            let decoded_key = Buffer.from(transactionResponse['local-state-delta'][0]['delta'][0]['key'], "base64").toString();
             console.log("Local State updated:");
-            console.log("key: " + decoded_key);
-            let encoded_vote = Buffer.from(transactionResponse['local-state-delta'][0]['delta'][0]['value']['bytes'], "base64").toString();
-            console.log("bytes: " + encoded_vote);
+            for(const delta of transactionResponse['local-state-delta'][0]['delta']){
+                const decoded_key = Buffer.from(delta['key'], "base64").toString();
+                console.log("key: " + decoded_key);
+                if(decoded_key == 'public_key'){
+                    console.log('bytes: ', delta['value']['bytes'])
+                }else{
+                    const encoded_vote = Buffer.from(delta['value']['bytes'], "base64").toString();
+                    console.log("bytes: " + encoded_vote);
+                }
+            }
         }
     } catch (err) {
         generateDebugLog('vote', err);
