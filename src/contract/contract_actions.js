@@ -310,8 +310,69 @@ export const registration = async (senderAccount, appID, assetID, client) => {
 
 }
 
-export const vote = async (senderAccount, appID, client) => {
+export const vote = async (senderAccount, EAAddress, appID, assetID, encryptedVote, generatedPublicKey, client) => {
+    try {
+        let noop = "vote"
 
+        const assets = []
+        assets.push(
+            assetID
+        )
+
+        const appArgs = []
+    
+        appArgs.push(
+            new Uint8Array(Buffer.from(noop)),
+            new Uint8Array(Buffer.from(encryptedVote)),
+            new Uint8Array(Buffer.from(generatedPublicKey)),
+        )
+
+        const accounts = []
+        accounts.push(
+            EAAddress,
+        )
+
+        let params = await client.getTransactionParams().do()
+        params.fee = 1000;
+        params.flatFee = true;
+
+        // create unsigned transaction
+        let txn = algosdk.makeApplicationNoOpTxn(senderAccount.addr, params, appID, appArgs, accounts, undefined, assets)
+
+        let txId = txn.txID().toString();
+        // Sign the transaction
+        let signedTxn = txn.signTxn(senderAccount.sk);
+        console.log("Signed transaction with txID: %s", txId);
+
+        // Submit the transaction
+        await client.sendRawTransaction(signedTxn).do()
+        // Wait for transaction to be confirmed
+        const confirmedTxn = await algosdk.waitForConfirmation(client, txId, 4);
+        //console.log("Confirmed " + confirmedTxn)
+
+        //Get the completed Transaction
+        console.log("Transaction " + txId + " confirmed in round " + confirmedTxn["confirmed-round"]);
+
+        // display results
+        let transactionResponse = await client.pendingTransactionInformation(txId).do();
+        console.log("Called app-id:", transactionResponse['txn']['txn']['apid'])
+        if (transactionResponse['global-state-delta'] !== undefined) {
+            console.log("Global State updated:", transactionResponse['global-state-delta']);
+            const decoded_key = Buffer.from(transactionResponse['global-state-delta'][0]['key'], "base64").toString();
+            console.log("key: " + decoded_key);
+            console.log("uint: " + transactionResponse['global-state-delta'][0]['value']['uint']);
+        }
+        if (transactionResponse['local-state-delta'] !== undefined) {
+            let decoded_key = Buffer.from(transactionResponse['local-state-delta'][0]['delta'][0]['key'], "base64").toString();
+            console.log("Local State updated:");
+            console.log("key: " + decoded_key);
+            let encoded_vote = Buffer.from(transactionResponse['local-state-delta'][0]['delta'][0]['value']['bytes'], "base64").toString();
+            console.log("bytes: " + encoded_vote);
+        }
+    } catch (err) {
+        generateDebugLog('vote', err);
+        throw new Error('vote fail');
+    }
 
 
 
@@ -374,6 +435,59 @@ export const confirmIdentity = async (senderAccount, voterAccount, appID, assetI
     } catch (err) {
         generateDebugLog('confirmIdentity', err);
         throw new Error('confirmIdentity fail');
+    }
+}
+
+
+export const tally = async (senderAccount, appID, tallyKey, client) => {
+    try {
+        let noop = "tally"
+
+        const appArgs = []
+        appArgs.push(
+            new Uint8Array(Buffer.from(noop)),
+            new Uint8Array(Buffer.from(tallyKey))
+        )
+
+
+        let params = await client.getTransactionParams().do()
+        params.fee = 1000;
+        params.flatFee = true;
+
+        // create unsigned transaction
+        let txn = algosdk.makeApplicationNoOpTxn(senderAccount.addr, params, appID, appArgs, undefined, undefined, undefined)
+
+        let txId = txn.txID().toString();
+        // Sign the transaction
+        let signedTxn = txn.signTxn(senderAccount.sk);
+        console.log("Signed transaction with txID: %s", txId);
+
+        // Submit the transaction
+        await client.sendRawTransaction(signedTxn).do()
+        // Wait for transaction to be confirmed
+        const confirmedTxn = await algosdk.waitForConfirmation(client, txId, 4);
+        //console.log("Confirmed " + confirmedTxn)
+
+        //Get the completed Transaction
+        console.log("Transaction " + txId + " confirmed in round " + confirmedTxn["confirmed-round"]);
+
+        // display results
+        let transactionResponse = await client.pendingTransactionInformation(txId).do();
+        console.log("Called app-id:", transactionResponse['txn']['txn']['apid'])
+        if (transactionResponse['global-state-delta'] !== undefined) {
+            const decoded_key = Buffer.from(transactionResponse['global-state-delta'][0]['key'], "base64").toString();
+            const tallyKey = transactionResponse['global-state-delta'][0]['value']['bytes'];        
+            console.log("Tally key: " + tallyKey);
+        }
+        if (transactionResponse['local-state-delta'] !== undefined) {
+            let decoded_key = Buffer.from(transactionResponse['local-state-delta'][0]['delta'][0]['key'], "base64").toString();
+            console.log("Local State updated:");
+            console.log("key: " + decoded_key);
+            console.log("uint: " + transactionResponse['local-state-delta'][0]['delta'][0]['value']['uint']);
+        }
+    } catch (err) {
+        generateDebugLog('tally', err);
+        throw new Error('tally fail');
     }
 }
 

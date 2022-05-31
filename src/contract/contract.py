@@ -3,18 +3,20 @@ from pyteal import *
 def approval_program():
     init = Seq(
         [
-            App.globalPut(Bytes("ElectionAuthority"), Txn.sender()),
+            App.globalPut(Bytes("Creator"), Txn.sender()),
             App.globalPut(Bytes("BallotID"), Int(0)),
-            Assert(Txn.application_args.length() == Int(4)),
+            Assert(Txn.application_args.length() == Int(6)),
             App.globalPut(Bytes("RegBegin"), Btoi(Txn.application_args[0])),
             App.globalPut(Bytes("RegEnd"), Btoi(Txn.application_args[1])),
             App.globalPut(Bytes("VoteBegin"), Btoi(Txn.application_args[2])),
             App.globalPut(Bytes("VoteEnd"), Btoi(Txn.application_args[3])),
+            App.globalPut(Bytes("VotingKey"), Txn.application_args[4]),
+            App.globalPut(Bytes("ElectionAuthority"), Txn.application_args[5]),
             Approve(),
         ]
     )
 
-    is_electionAuthority = Txn.sender() == App.globalGet(Bytes("ElectionAuthority"))
+    is_creator = Txn.sender() == App.globalGet(Bytes("Creator"))
 
     get_encrypted_vote = App.localGetEx(Int(0), App.id(), Bytes("encrypted_vote"))
 
@@ -49,9 +51,7 @@ def approval_program():
             get_encrypted_vote,
             account_asset_balance,
             Assert(
-                And(Txn.application_args.length() == Int(2),
-                    Txn.accounts.length() == Int(1),
-                    Txn.accounts[1] == App.globalGet(Bytes("ElectionAuthority")),
+                And(Txn.application_args.length() == Int(3),
                     Global.latest_timestamp() >= App.globalGet(Bytes("VoteBegin")),
                     Global.latest_timestamp() <= App.globalGet(Bytes("VoteEnd")),
                     Txn.assets[0] == App.globalGet(Bytes("BallotID")),# check that the asset is correct
@@ -66,7 +66,7 @@ def approval_program():
             InnerTxnBuilder.Begin(),
             InnerTxnBuilder.SetFields({
                 TxnField.type_enum: TxnType.AssetTransfer,
-                TxnField.asset_receiver: Txn.accounts[1],
+                TxnField.asset_receiver: App.globalGet(Bytes("Creator")),
                 TxnField.asset_sender: Txn.sender(),
                 TxnField.asset_amount: Int(1),
                 TxnField.xfer_asset: Txn.assets[0],
@@ -76,6 +76,9 @@ def approval_program():
             # Save the encrypted vote
             App.localPut(Int(0), Bytes("encrypted_vote"), Txn.application_args[1]),
 
+            # Save the voter generated public key
+             App.localPut(Int(0), Bytes("public_key"), Txn.application_args[2]),
+
             Approve(),
         ]
     )
@@ -84,7 +87,7 @@ def approval_program():
         [
             Assert(
                 And(Txn.application_args.length() == Int(1),
-                    Txn.sender() == App.globalGet(Bytes("ElectionAuthority")),
+                    Txn.sender() == App.globalGet(Bytes("Creator")),
                     App.globalGet(Bytes("BallotID")) == Int(0),
                 )
             ),
@@ -116,7 +119,7 @@ def approval_program():
 
     on_closeout = Seq(
         [
-            Approve(),
+            Reject(), # Don't allow to clear local state
         ]
     )
 
@@ -137,7 +140,7 @@ def approval_program():
             Assert(
                 And(
                     Txn.application_args.length() == Int(1),
-                    Txn.sender() == App.globalGet(Bytes("ElectionAuthority")),
+                    Txn.sender() == App.globalGet(Bytes("Creator")),
                     App.globalGet(Bytes("BallotID")) != Int(0),
                     )
                 ),
@@ -186,12 +189,25 @@ def approval_program():
         ]
     )
 
+    on_tally = Seq(
+        [
+             Assert(
+                And(Txn.application_args.length() == Int(2),
+                    Txn.sender() == App.globalGet(Bytes("Creator")),
+                    #Global.latest_timestamp() >= App.globalGet(Bytes("VoteEnd")), # Disabled for debug purpose
+                )
+            ),
+
+            App.globalPut(Bytes("TallyKey"), Txn.application_args[1]),
+            Approve(),
+        ]
+    )
 
 
     program = Cond(
         [Txn.application_id() == Int(0), init],
-        [Txn.on_completion() == OnComplete.DeleteApplication, Return(is_electionAuthority)],
-        [Txn.on_completion() == OnComplete.UpdateApplication, Return(is_electionAuthority)],
+        [Txn.on_completion() == OnComplete.DeleteApplication, Return(is_creator)],
+        [Txn.on_completion() == OnComplete.UpdateApplication, Reject()],
         [Txn.on_completion() == OnComplete.CloseOut, on_closeout],
         [Txn.on_completion() == OnComplete.OptIn, on_optin],
         [Txn.application_args[0] == Bytes("generate_ballots"), on_generate_ballots],
@@ -199,6 +215,7 @@ def approval_program():
         [Txn.application_args[0] == Bytes("registration"), on_registration],
         [Txn.application_args[0] == Bytes("confirm_identity"), on_confirm_identity],
         [Txn.application_args[0] == Bytes("vote"), on_vote],
+        [Txn.application_args[0] == Bytes("tally"), on_tally],
     )
 
     return program

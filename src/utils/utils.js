@@ -6,6 +6,10 @@
 import algosdk from "algosdk";
 import fs from 'fs';
 import chalk from "chalk";
+import nacl from 'tweetnacl';
+const { box, randomBytes } = nacl;
+import naclutils from 'tweetnacl-util';
+const { decodeUTF8, encodeUTF8, encodeBase64, decodeBase64 } = naclutils;
 
 /**
  * Read the provided @account local state of the @index smart contract.
@@ -176,7 +180,7 @@ export const clawBackAsset = async (clawBackAccount, senderAddress, receiverAddr
         params.fee = 1000;
         params.flatFee = true;
 
-        
+
         let revocationTarget = senderAddress;
         let closeRemainderTo = undefined;
         let note = undefined;
@@ -211,10 +215,10 @@ export const clawBackAsset = async (clawBackAccount, senderAddress, receiverAddr
 
 }
 
-export const getSmartContractAddress = async (appID)=>{
+// export const getSmartContractAddress = async (appID) => {
 
-    return algosdk.getApplicationAddress(appID)
-}
+//     return algosdk.getApplicationAddress(appID)
+// }
 
 
 export const foundSmartContract = async (senderAccount, smartContractAddress, client) => {
@@ -264,5 +268,127 @@ export const foundSmartContract = async (senderAccount, smartContractAddress, cl
     } catch (err) {
         generateDebugLog("foundSmartContract", err);
         throw new Error('found smart contract fail');
+    }
+}
+
+
+
+const newNonce = () => randomBytes(box.nonceLength);
+
+export const generateKeyPair = () => box.keyPair();
+
+export const encrypt = (secretOrSharedKey, json, key) => {
+    const nonce = newNonce();
+    const messageUint8 = decodeUTF8(JSON.stringify(json));
+    const encrypted = key
+        ? box(messageUint8, nonce, key, secretOrSharedKey)
+        : box.after(messageUint8, nonce, secretOrSharedKey);
+
+    const fullMessage = new Uint8Array(nonce.length + encrypted.length);
+    fullMessage.set(nonce);
+    fullMessage.set(encrypted, nonce.length);
+
+    const base64FullMessage = encodeBase64(fullMessage);
+    return base64FullMessage;
+};
+
+export const decrypt = (secretOrSharedKey, messageWithNonce, key) => {
+    const messageWithNonceAsUint8Array = decodeBase64(messageWithNonce);
+    const nonce = messageWithNonceAsUint8Array.slice(0, box.nonceLength);
+    const message = messageWithNonceAsUint8Array.slice(
+        box.nonceLength,
+        messageWithNonce.length
+    );
+
+    const decrypted = key
+        ? box.open(message, nonce, key, secretOrSharedKey)
+        : box.open.after(message, nonce, secretOrSharedKey);
+
+    if (!decrypted) {
+        throw new Error('Could not decrypt message');
+    }
+
+    const base64DecryptedMessage = encodeUTF8(decrypted);
+    return JSON.parse(base64DecryptedMessage);
+};
+
+
+
+export const getVotingKey = async (index, client) => {
+    try {
+        let votingKey = undefined
+        let applicationInfoResponse = await client.getApplicationByID(index).do();
+        let globalState = applicationInfoResponse['params']['global-state']
+        globalState.map((state) => {
+            const decoded_key = Buffer.from(state['key'], "base64").toString();
+            if(decoded_key == 'VotingKey'){
+                votingKey = state['value']['bytes'];
+                console.log("VotingKey: " + votingKey);
+            }
+        })
+
+        return votingKey;
+    } catch (err) {
+        console.log(err)
+    }
+}
+
+export const getElectionAuthorityAddress = async (index, client) =>{
+
+    try {
+        let eaaddr = undefined
+        let applicationInfoResponse = await client.getApplicationByID(index).do();
+        let globalState = applicationInfoResponse['params']['global-state']
+        globalState.map((state) => {
+            const decoded_key = Buffer.from(state['key'], "base64").toString();
+            if(decoded_key == 'ElectionAuthority'){
+                eaaddr = Buffer.from(state['value']['bytes'], "base64").toString();
+            }
+        })
+
+        console.log("ElectionAuthority = ", eaaddr)
+        return eaaddr;
+    } catch (err) {
+        console.log(err)
+    }
+}
+
+export const getBallotID = async (index, client) =>{
+
+    try {
+        let ballotID = undefined
+        let applicationInfoResponse = await client.getApplicationByID(index).do();
+        let globalState = applicationInfoResponse['params']['global-state']
+        globalState.map((state) => {
+            const decoded_key = Buffer.from(state['key'], "base64").toString();
+            if(decoded_key == 'BallotID'){
+                ballotID = state['value']['uint'];
+            }
+        })
+
+        console.log("BallotID = ", ballotID)
+        return ballotID;
+    } catch (err) {
+        console.log(err)
+    }
+}
+
+export const getTallyKey = async (index, client) =>{
+
+    try {
+        let tallykey = undefined
+        let applicationInfoResponse = await client.getApplicationByID(index).do();
+        let globalState = applicationInfoResponse['params']['global-state']
+        globalState.map((state) => {
+            const decoded_key = Buffer.from(state['key'], "base64").toString();
+            if(decoded_key == 'TallyKey'){
+                tallykey = state['value']['bytes']
+            }
+        })
+
+        console.log("TallyKey = ", tallykey)
+        return tallykey;
+    } catch (err) {
+        console.log(err)
     }
 }

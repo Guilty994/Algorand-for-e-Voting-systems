@@ -1,7 +1,12 @@
-import { optin, registration } from "../contract/contract_actions.js";
-import { sendAsset } from "../utils/utils.js";
+import { optin, registration, vote } from "../contract/contract_actions.js";
+import { sendAsset, getVotingKey, generateKeyPair, encrypt, getElectionAuthorityAddress } from "../utils/utils.js";
 import dotenv from 'dotenv';
 import chalk from 'chalk';
+
+import nacl from 'tweetnacl';
+const { box, randomBytes } = nacl;
+import naclutils from 'tweetnacl-util';
+const { decodeUTF8, encodeUTF8, encodeBase64, decodeBase64 } = naclutils;
 
 
 dotenv.config()
@@ -37,7 +42,31 @@ export const registrationRequest = async (voterAccount, appID, ballotID, client)
 
 }
 
-export const voteRequest = async (voterAccount, appID, ballotID, client) => {
+export const voteRequest = async (voterAccount, appID, ballotID, choice, client) => {
 
+   // get voting key
+   console.group(chalk.blueBright("GET VOTING KEY (VOTER->SC)"))
+   const votingKey = await getVotingKey(appID, client)
+   console.groupEnd(chalk.blueBright("GET VOTING KEY (VOTER->SC)"))
+
+   // encrypt vote
+   console.group(chalk.blueBright("ENCRYPT VOTE (VOTER)"))
+   const voterGeneratedKeys = generateKeyPair();
+
+   const encryptionSharedKey = box.before(decodeBase64(votingKey), voterGeneratedKeys.secretKey)
+   const encryptedVote = encrypt(encryptionSharedKey, choice)
+   console.log("Encrypted vote: ", encryptedVote)
+   console.log("Voter generated public key: ", encodeBase64(voterGeneratedKeys.publicKey))
+
+   console.groupEnd(chalk.blueBright("ENCRYPT VOTE (VOTER)"))
+
+
+   // Send vote
+   console.group(chalk.blueBright("SEND VOTE (VOTER->SC)"))
+   const eaaddr = await getElectionAuthorityAddress(appID, client)
+   await vote(voterAccount, eaaddr, appID, ballotID, encryptedVote, voterGeneratedKeys.publicKey, client)
+   console.groupEnd(chalk.blueBright("SEND VOTE (VOTER->SC)"))
+
+   return {encryptedVote, voterGeneratedKeys}
 }
 

@@ -15,5 +15,5 @@ export const acceptRegistration = async (electAuthAccount, voterAddress, appID, 
 
     console.group(chalk.blueBright("CONFIRM VOTER IDENTITY (EA->SC)"))
     await confirmIdentity(electAuthAccount, voterAddress, appID, ballotID, client)
-    console.groupEnd(chalk.blueBright("CONFIRM VOTER IDENTIT (EA->SC)"))
+    console.groupEnd(chalk.blueBright("CONFIRM VOTER IDENTITY (EA->SC)"))
 }

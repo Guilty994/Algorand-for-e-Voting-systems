@@ -2,8 +2,12 @@ import * as fs from 'fs';
 import algosdk from 'algosdk';
 import dotenv from 'dotenv';
 import chalk from 'chalk';
+import nacl from 'tweetnacl';
+const { box, randomBytes } = nacl;
+import naclutils from 'tweetnacl-util';
+const { decodeUTF8, encodeUTF8, encodeBase64, decodeBase64 } = naclutils;
 
-import { applicationAddress, lunchClient, sendAsset, foundSmartContract} from '../utils/utils.js';
+import { applicationAddress, lunchClient, sendAsset, foundSmartContract, generateKeyPair} from '../utils/utils.js';
 import {init, generateBallots, smartContractOptinAsset} from '../contract/contract_actions.js' 
 
 dotenv.config()
@@ -28,17 +32,16 @@ const compileProgram = async (client, programSource) => {
  * @param {*} electAuthAccount
  * @returns 
  */
-export const debugSetup = async (electAuthAccount) => {//TODO: Modularizzare sta roba e portarla nei file di test
+export const debugSetup = async (electAuthAccount, client) => {//TODO: Modularizzare sta roba e portarla nei file di test
 
     console.group(chalk.bgGreenBright("VOTING SETUP"));
-    let client = await lunchClient();
     //SMART CONTRACT DEPLOYMENT
 
     // declare application state storage (immutable)
-    const localInts = 1;
-    const localBytes = 1; // vote, registered status
-    const globalInts = 25; // 5 for setup + 20 for result publication.
-    const globalBytes = 1; // EA address, 
+    const localInts = 1; // registered status
+    const localBytes = 2; // encrypted vote, voter generated public key
+    const globalInts = 5; // regstart, regend, votestart, voteend, ballotid
+    const globalBytes = 4; // EA address, voting key, creator, tally key (ea address = creator)
 
     // Read Teal File
     let approvalProgram = ''
@@ -59,13 +62,28 @@ export const debugSetup = async (electAuthAccount) => {//TODO: Modularizzare sta
     // 86400 = 1 day
     let current_date = Math.round((new Date()).getTime() / 1000);
 
+
+    // correct setup
+    // let RegBegin = current_date;
+    // let RegEnd = RegBegin + 86400;
+    // let VoteBegin = RegEnd + 86400;
+    // let VoteEnd = VoteBegin + 86400;
+
+    // debug setup
+
     let RegBegin = current_date;
-    let RegEnd = RegBegin + 86400;
-    let VoteBegin = RegEnd + 86400;
-    let VoteEnd = VoteBegin + 86400;
+    let RegEnd = current_date + 86400;
+    let VoteBegin = current_date;
+    let VoteEnd = current_date + 86400;
 
     console.log(`Registration from: ${RegBegin} To: ${RegEnd}`)
     console.log(`Vote from: ${VoteBegin} To: ${VoteEnd}`)
+
+    // Create voting keys
+    const EAKeys = generateKeyPair()
+
+    console.log(`Public vote key: ${encodeBase64(EAKeys.publicKey)}\nPrivate vote key: ${encodeBase64(EAKeys.secretKey)}`)
+   
 
     // create list of bytes for app args
     let appArgs = [];
@@ -75,6 +93,8 @@ export const debugSetup = async (electAuthAccount) => {//TODO: Modularizzare sta
         new Uint8Array(Buffer.from(algosdk.encodeUint64(RegEnd))),
         new Uint8Array(Buffer.from(algosdk.encodeUint64(VoteBegin))),
         new Uint8Array(Buffer.from(algosdk.encodeUint64(VoteEnd))),
+        EAKeys.publicKey,
+        new Uint8Array(Buffer.from(electAuthAccount.addr)),
     )
 
     // Create new application
@@ -103,7 +123,10 @@ export const debugSetup = async (electAuthAccount) => {//TODO: Modularizzare sta
     await sendAsset(electAuthAccount, electAuthAccount, ballotID, 0, client)
     console.groupEnd("OPTIN ASSET \"BALLOTS\" (EA->ALGORAND)")
 
+    
+
+
 
     console.groupEnd("VOTING SETUP");
-    return {appID, ballotID}
+    return {appID, ballotID, EAKeys}
 }

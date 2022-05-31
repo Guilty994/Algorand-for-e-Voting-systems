@@ -3,9 +3,13 @@
  */
 
 import { debugSetup } from "../src/authority/setup_handler.js";
-import { lunchClient } from "../src/utils/utils.js";
+import { lunchClient, generateKeyPair, decrypt, encrypt, getElectionAuthorityAddress} from "../src/utils/utils.js";
 import { acceptRegistration } from "../src/authority/accept_registration.js";
 import { preRegistrationRequest, registrationRequest, voteRequest } from "../src/voter/voter_handler.js";
+import nacl from "tweetnacl";
+const { box } = nacl;
+import naclutils from 'tweetnacl-util';
+const { decodeUTF8, encodeUTF8, encodeBase64, decodeBase64 } = naclutils;
 import algosdk from 'algosdk';
 import dotenv from 'dotenv';
 import chalk from 'chalk';
@@ -17,16 +21,18 @@ chai.should();
 
 dotenv.config()
 
-export const main = async () => {
+export const voterSetup = async () => {
+
+    let client = await lunchClient();
 
     const voterAccount = algosdk.mnemonicToSecretKey(process.env.VOTERMNEMONIC);
 
     const electAuthAccount = algosdk.mnemonicToSecretKey(process.env.ELECTAUTHMNEMONIC);
 
     // Lunch the voting project
-    let returnedIDs = await debugSetup(electAuthAccount);
+    let returnedIDs = await debugSetup(electAuthAccount, client);
 
-    let client = await lunchClient();
+
 
     console.group(chalk.bgGreenBright("REGISTRATION PROCESS"))
     await preRegistrationRequest(returnedIDs, voterAccount, client);
@@ -36,10 +42,58 @@ export const main = async () => {
 
 
     console.group(chalk.bgGreenBright("VOTING PROCESS"))
-    await voteRequest(voterAccount, returnedIDs.appID, returnedIDs.ballotID, client);
+    const choice = {candidate_id: '123'}
+    console.log("Plain text vote: ", choice)
+    const returnVoterRequest = await voteRequest(voterAccount, returnedIDs.appID, returnedIDs.ballotID, choice, client);
     console.groupEnd("VOTING PROCESS")
+
+
+
+    
+
+    // // sanity check
+    // const decryptionSharedKey = box.before(returnVoterRequest.voterGeneratedKeys.publicKey, returnedIDs.EAKeys.secretKey)
+
+    // const decryptedVote = decrypt(decryptionSharedKey, returnVoterRequest.encryptedVote)
+    // console.log("Decrypted vote: ", decryptedVote)
 }
 
 
-main()
+export const testKeys = async () => {
+
+    const vote = { candidate_id: '123' }
+    const EAKeys = generateKeyPair()
+    const voterKeys = generateKeyPair()
+
+ 
+    console.log("Pub key: ", encodeBase64(EAKeys.publicKey))
+
+    //generate public key from private key using algorand public key
+
+    
+
+    const encryptionSharedKey = box.before(EAKeys.publicKey, voterKeys.secretKey)
+    const encryptedVote = encrypt(encryptionSharedKey, vote)
+    console.log("Encrypted vote: ", encryptedVote)
+
+
+    // console.log("Encrypted vote unint8array: ",  new Uint8Array(Buffer.from(encryptedVote)))
+
+
+    const decryptionSharedKey = box.before(voterKeys.publicKey, EAKeys.secretKey)
+
+    const decryptedVote = decrypt(decryptionSharedKey, encryptedVote)
+    console.log("Decrypted vote: ", decryptedVote)
+
+}
+
+testKeys()
+
+
+// voterSetup()
+
+
+
+
+
 

@@ -11,31 +11,31 @@ import chalk from 'chalk';
 import chai from 'chai';
 import { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
+import { enableTally } from "../src/authority/enable_tally.js";
 chai.use(chaiAsPromised);
 chai.should();
 
 dotenv.config()
 
 
-describe('Correct setup', function () {
+xdescribe('Correct setup', function () {
 
     this.timeout(9999999);
     it('Nothing should fail', async function () {
 
-        // Voting project start
-        console.group(chalk.bgGreenBright("VOTING SETUP"))
-        const electAuthAccount = algosdk.mnemonicToSecretKey(process.env.ELECTAUTHMNEMONIC);
-        let returnedIDs = await debugSetup(electAuthAccount);
-        console.groupEnd("VOTING SETUP")
-
         let client = await lunchClient();
+
+        // Voting project start
+        const electAuthAccount = algosdk.mnemonicToSecretKey(process.env.ELECTAUTHMNEMONIC);
+        let returnedIDs = await debugSetup(electAuthAccount, client);
+
 
         console.group(chalk.bgGreenBright("APP GLOBAL STATE"))
         await readGlobalState(returnedIDs.appID, client);
         console.groupEnd("APP GLOBAL STATE")
 
         console.group(chalk.bgGreenBright("DELEATE APP"))
-        await deleteApplication(electAuthAccount,returnedIDs.appID, client);
+        await deleteApplication(electAuthAccount, returnedIDs.appID, client);
         console.groupEnd("DELETE APP")
 
     });
@@ -47,16 +47,16 @@ xdescribe('Illegal ballot generation', function () {
     this.timeout(9999999);
 
     it('generateBallots should fail', async function () {
+
+        let client = await lunchClient();
         // Voting project start
-        console.group(chalk.bgGreenBright("VOTING SETUP"))
         let electAuthAccount = algosdk.mnemonicToSecretKey(process.env.ELECTAUTHMNEMONIC);
-        let returnedIds = await expect(debugSetup(electAuthAccount)).to.not.be.rejected;
+        let returnedIds = await expect(debugSetup(electAuthAccount, client)).to.not.be.rejected;
         expect(returnedIds.appID).to.be.a('number');
         expect(returnedIds.ballotID).to.be.a('number');
-        console.groupEnd("VOTING SETUP")
 
         console.group(chalk.bgYellowBright("ILLEGAL BALLOTS GENERATION"))
-        let client = await lunchClient();
+
 
         // Double creation by EA
         await expect(generateBallots(electAuthAccount, returnedIds.appID, client)).to.eventually.be.rejectedWith('generate ballots fail').and.be.an.instanceOf(Error);
@@ -64,7 +64,7 @@ xdescribe('Illegal ballot generation', function () {
         // Double creation from another user
         let anotherUserAccount = algosdk.mnemonicToSecretKey(process.env.VOTERMNEMONIC);
         await expect(generateBallots(anotherUserAccount, returnedIds.appID, client)).to.eventually.be.rejectedWith('generate ballots fail').and.be.an.instanceOf(Error);
-        
+
         console.groupEnd("ILLEGAL BALLOT GENERATION")
 
         console.group(chalk.bgGreenBright("DELEATE APP"))
@@ -74,4 +74,20 @@ xdescribe('Illegal ballot generation', function () {
 
 });
 
+xdescribe('Tally tests', function () {
+    this.timeout(9999999);
 
+    it('Should not fail', async function () {
+
+
+        let client = await lunchClient();
+
+        // Voting project start
+        const electAuthAccount = algosdk.mnemonicToSecretKey(process.env.ELECTAUTHMNEMONIC);
+        let returnedIDs = await debugSetup(electAuthAccount, client);
+
+
+        await enableTally(electAuthAccount, returnedIDs.appID, returnedIDs.EAKeys.secretKey, client)
+
+    });
+});
