@@ -63,15 +63,28 @@ def approval_program():
             ),
             
             # Revoke the ballot
+            # InnerTxnBuilder.Begin(),
+            # InnerTxnBuilder.SetFields({
+            #     TxnField.type_enum: TxnType.AssetTransfer,
+            #     TxnField.asset_receiver: App.globalGet(Bytes("Creator")),
+            #     TxnField.asset_sender: Txn.sender(),
+            #     TxnField.asset_amount: Int(1),
+            #     TxnField.xfer_asset: Txn.assets[0],
+            # }),
+            # InnerTxnBuilder.Submit(),
+
             InnerTxnBuilder.Begin(),
             InnerTxnBuilder.SetFields({
                 TxnField.type_enum: TxnType.AssetTransfer,
-                TxnField.asset_receiver: App.globalGet(Bytes("Creator")),
-                TxnField.asset_sender: Txn.sender(),
+                TxnField.asset_receiver: Txn.sender(),
+                TxnField.asset_sender: Global.current_application_address(),
                 TxnField.asset_amount: Int(1),
                 TxnField.xfer_asset: Txn.assets[0],
             }),
             InnerTxnBuilder.Submit(),
+
+
+
 
             # Save the encrypted vote
             App.localPut(Int(0), Bytes("encrypted_vote"), Txn.application_args[1]),

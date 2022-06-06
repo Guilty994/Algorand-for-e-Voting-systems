@@ -109,10 +109,9 @@ assert
 itxn_begin
 int axfer
 itxn_field TypeEnum
-byte "Creator"
-app_global_get
-itxn_field AssetReceiver
 txn Sender
+itxn_field AssetReceiver
+global CurrentApplicationAddress
 itxn_field AssetSender
 int 1
 itxn_field AssetAmount

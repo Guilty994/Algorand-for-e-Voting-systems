@@ -2,7 +2,7 @@
  * Tests for voting process simulation
  */
 
-import { debugSetup } from "../src/authority/setup_handler.js";
+import { debugSetup, setupElection} from "../src/authority/setup_handler.js";
 import { lunchClient } from "../src/utils/utils.js";
 import { acceptRegistration } from "../src/authority/accept_registration.js";
 import { preRegistrationRequest, registrationRequest, voteRequest } from "../src/voter/voter_handler.js";
@@ -17,11 +17,30 @@ dotenv.config()
 export const main = async () => {
 
     let client = await lunchClient();
+    const votersMails = ['electionauthoritytest+voter1@gmail.com', 'electionauthoritytest+voter2@gmail.com', 'electionauthoritytest+voter3@gmail.com'];
 
    
     // Lunch the voting project
     const electAuthAccount = algosdk.mnemonicToSecretKey(process.env.ELECTAUTHMNEMONIC);
-    const returnedIDs = await debugSetup(electAuthAccount, client);
+
+    console.group(chalk.bgGreenBright("VOTING SETUP"));
+    let current_date = Math.round((new Date()).getTime() / 1000);
+
+    // real setup
+    // let RegBegin = current_date;
+    // let RegEnd = RegBegin + 86400;
+    // let VoteBegin = RegEnd + 86400;
+    // let VoteEnd = VoteBegin + 86400;
+
+    // debug setup
+    let RegBegin = current_date;
+    let RegEnd = current_date + 86400;
+    let VoteBegin = current_date;
+    let VoteEnd = current_date + 86400;
+
+    const returnedIDs = await setupElection(RegBegin, RegEnd, VoteBegin, VoteEnd, electAuthAccount, client);
+
+    console.groupEnd("VOTING SETUP");
    
     // Simulate pre-registration
     const voterAccount1 = algosdk.mnemonicToSecretKey(process.env.VOTERMNEMONIC);
@@ -30,26 +49,26 @@ export const main = async () => {
 
     console.group(chalk.bgGreenBright("PRE-REGISTRATION"))
     console.group(chalk.bgCyanBright("VOTER 1"))
-    await preRegistrationRequest(returnedIDs, voterAccount1, client);
+    await preRegistrationRequest(returnedIDs, voterAccount1, 'electionauthoritytest+ea@gmail.com', votersMails[0], 'debugpayload', client);
     console.groupEnd("VOTER 1")
     console.group(chalk.bgCyanBright("VOTER 2"))
-    await preRegistrationRequest(returnedIDs, voterAccount2, client);
+    await preRegistrationRequest(returnedIDs, voterAccount2, 'electionauthoritytest+ea@gmail.com', votersMails[1], 'debugpayload', client);
     console.groupEnd("VOTER 2")
     console.group(chalk.bgCyanBright("VOTER 3"))
-    await preRegistrationRequest(returnedIDs, voterAccount3, client);
+    await preRegistrationRequest(returnedIDs, voterAccount3, 'electionauthoritytest+ea@gmail.com', votersMails[2], 'debugpayload', client);
     console.groupEnd("VOTER 3")
     console.groupEnd("PRE-REGISTRATION")
 
     // Simulate confirm identity
     console.group(chalk.bgGreenBright("IDENTITY CONFIRMATION"))
     console.group(chalk.bgCyanBright("VOTER 1"))
-    await acceptRegistration(electAuthAccount, voterAccount1.addr, returnedIDs.appID, returnedIDs.ballotID, client);
+    await acceptRegistration(electAuthAccount, voterAccount1.addr, returnedIDs.appID, returnedIDs.ballotID, votersMails[0], client);
     console.groupEnd("VOTER 1")
     console.group(chalk.bgCyanBright("VOTER 2"))
-    await acceptRegistration(electAuthAccount, voterAccount2.addr, returnedIDs.appID, returnedIDs.ballotID, client);
+    await acceptRegistration(electAuthAccount, voterAccount2.addr, returnedIDs.appID, returnedIDs.ballotID, votersMails[1], client);
     console.groupEnd("VOTER 2")
     console.group(chalk.bgCyanBright("VOTER 3"))
-    await acceptRegistration(electAuthAccount, voterAccount3.addr, returnedIDs.appID, returnedIDs.ballotID, client);
+    await acceptRegistration(electAuthAccount, voterAccount3.addr, returnedIDs.appID, returnedIDs.ballotID, votersMails[2], client);
     console.groupEnd("VOTER 3")
     console.groupEnd("IDENTITY CONFIRMATION")
 

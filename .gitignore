@@ -3,3 +3,4 @@ node_modules/
 debug/
 log.txt
 src/examples
+test/stress_test.js

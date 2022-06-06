@@ -23,8 +23,8 @@ export const computeResults = async (appID, client) => {
 
     console.log("AppID = ", appID)
 
-    // Get EA Address
-    const eaaddr = await getElectionAuthorityAddress(appID, client)
+    // // Get EA Address
+    // const eaaddr = await getElectionAuthorityAddress(appID, client)
 
     // Get ASA id
     const ballotid = await getBallotID(appID, client)
@@ -50,7 +50,7 @@ export const computeResults = async (appID, client) => {
 
     data['balances'].forEach(entry => {
 
-        if (entry['amount'] == 0) {
+        if (entry['amount'] == 2) {
             votersAddress.push(entry['address'])
         }
     });

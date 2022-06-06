@@ -1,5 +1,5 @@
 import { debugSetup } from "../src/authority/setup_handler.js";
-import { lunchClient, generateKeyPair, decrypt, encrypt, getElectionAuthorityAddress, getBallotID} from "../src/utils/utils.js";
+import { lunchClient, generateKeyPair, decrypt, encrypt, getElectionAuthorityAddress, getBallotID, registrationSuccessMail} from "../src/utils/utils.js";
 import { acceptRegistration } from "../src/authority/accept_registration.js";
 import { preRegistrationRequest, registrationRequest, voteRequest } from "../src/voter/voter_handler.js";
 import nacl from "tweetnacl";
@@ -32,4 +32,7 @@ export const main = async () => {
 
 }
 
-main()
+//main()
+
+
+registrationSuccessMail('electionauthoritytest+voter1@gmail.com')

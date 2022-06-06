@@ -4,6 +4,7 @@
 // https://developer.algorand.org/docs/get-details/encoding/
 
 import algosdk from "algosdk";
+import nodemailer from "nodemailer"
 import fs from 'fs';
 import chalk from "chalk";
 import nacl from 'tweetnacl';
@@ -321,7 +322,7 @@ export const getVotingKey = async (index, client) => {
         let globalState = applicationInfoResponse['params']['global-state']
         globalState.map((state) => {
             const decoded_key = Buffer.from(state['key'], "base64").toString();
-            if(decoded_key == 'VotingKey'){
+            if (decoded_key == 'VotingKey') {
                 votingKey = state['value']['bytes'];
                 console.log("VotingKey: " + votingKey);
             }
@@ -333,7 +334,7 @@ export const getVotingKey = async (index, client) => {
     }
 }
 
-export const getElectionAuthorityAddress = async (index, client) =>{
+export const getElectionAuthorityAddress = async (index, client) => {
 
     try {
         let eaaddr = undefined
@@ -341,7 +342,7 @@ export const getElectionAuthorityAddress = async (index, client) =>{
         let globalState = applicationInfoResponse['params']['global-state']
         globalState.map((state) => {
             const decoded_key = Buffer.from(state['key'], "base64").toString();
-            if(decoded_key == 'ElectionAuthority'){
+            if (decoded_key == 'ElectionAuthority') {
                 eaaddr = Buffer.from(state['value']['bytes'], "base64").toString();
             }
         })
@@ -353,7 +354,7 @@ export const getElectionAuthorityAddress = async (index, client) =>{
     }
 }
 
-export const getBallotID = async (index, client) =>{
+export const getBallotID = async (index, client) => {
 
     try {
         let ballotID = undefined
@@ -361,7 +362,7 @@ export const getBallotID = async (index, client) =>{
         let globalState = applicationInfoResponse['params']['global-state']
         globalState.map((state) => {
             const decoded_key = Buffer.from(state['key'], "base64").toString();
-            if(decoded_key == 'BallotID'){
+            if (decoded_key == 'BallotID') {
                 ballotID = state['value']['uint'];
             }
         })
@@ -373,7 +374,7 @@ export const getBallotID = async (index, client) =>{
     }
 }
 
-export const getTallyKey = async (index, client) =>{
+export const getTallyKey = async (index, client) => {
 
     try {
         let tallykey = undefined
@@ -381,7 +382,7 @@ export const getTallyKey = async (index, client) =>{
         let globalState = applicationInfoResponse['params']['global-state']
         globalState.map((state) => {
             const decoded_key = Buffer.from(state['key'], "base64").toString();
-            if(decoded_key == 'TallyKey'){
+            if (decoded_key == 'TallyKey') {
                 tallykey = state['value']['bytes']
             }
         })
@@ -391,4 +392,94 @@ export const getTallyKey = async (index, client) =>{
     } catch (err) {
         console.log(err)
     }
+}
+
+export const registrationSuccessMail = async (voterMail, appID) => {
+
+    return new Promise((resolve, reject) => {
+        let transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.EAMAIL,
+                pass: 'smxunocriyezvjes'
+            }
+        });
+
+        let mailOptions = {
+            from: process.env.EAMAIL,
+            to: voterMail,
+            subject: 'Identity verification report',
+            text: 'Your identity was confirmed. Please continue the registration process. Election ID: '+appID,
+        };
+
+        transporter.sendMail(mailOptions, function (error, info) {
+            if (error) {
+                console.log(error);
+                resolve(false); // or use rejcet(false) but then you will have to handle errors
+            }
+            else {
+                console.log('Email sent to ' + voterMail);
+                resolve(true);
+            }
+        });
+    })
+
+
+    // var transporter = nodemailer.createTransport({
+    //     service: 'gmail',
+    //     auth: {
+    //         user: process.env.EAMAIL,
+    //         pass: 'smxunocriyezvjes'
+    //     }
+    // });
+
+    // var mailOptions = {
+    //     from: process.env.EAMAIL,
+    //     to: voterMail,
+    //     subject: 'Identity verification report',
+    //     text: 'Your identity was confirmed, continue the registration process'
+    // };
+
+    // transporter.sendMail(mailOptions, function (error, info) {
+    //     if (error) {
+    //         console.log(error);
+    //     } else {
+    //         //console.log('Email sent: ' + info.response);
+    //         console.log('Identity confirmation success report sent to ' + voterMail)
+    //     }
+    // });
+
+}
+
+
+export const sendIdentityInformation = async (eamail, votermail, appID, algorandAddress, payload) => {
+
+    return new Promise((resolve, reject) => {
+        let transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.EAMAIL,
+                pass: 'smxunocriyezvjes'
+            }
+        });
+
+        let mailOptions = {
+            from: votermail,
+            to: eamail,
+            subject: 'Identity information',
+            text: 'Election ID: '+appID+'\nAlgorandAddress: '+algorandAddress+'\nPayload: '+payload,
+        };
+
+        transporter.sendMail(mailOptions, function (error, info) {
+            if (error) {
+                console.log(error);
+                resolve(false); // or use rejcet(false) but then you will have to handle errors
+            }
+            else {
+                console.log('Email sent to ' + eamail);
+                resolve(true);
+            }
+        });
+    })
+
 }

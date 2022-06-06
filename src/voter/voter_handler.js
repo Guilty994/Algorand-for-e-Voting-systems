@@ -1,5 +1,5 @@
 import { optin, registration, vote } from "../contract/contract_actions.js";
-import { sendAsset, getVotingKey, generateKeyPair, encrypt, getElectionAuthorityAddress } from "../utils/utils.js";
+import { sendAsset, getVotingKey, generateKeyPair, encrypt, getElectionAuthorityAddress, sendIdentityInformation } from "../utils/utils.js";
 import dotenv from 'dotenv';
 import chalk from 'chalk';
 
@@ -12,7 +12,7 @@ const { decodeUTF8, encodeUTF8, encodeBase64, decodeBase64 } = naclutils;
 dotenv.config()
 
 
-export const preRegistrationRequest = async (returnedIDs, voterAccount, client) => {
+export const preRegistrationRequest = async (returnedIDs, voterAccount, eamail, votermail, payload, client) => {
 
    console.group(chalk.blueBright("OPTIN SMART CONTRACT (VOTER->SC)"))
    await optin(voterAccount, returnedIDs.appID, client)
@@ -28,9 +28,12 @@ export const preRegistrationRequest = async (returnedIDs, voterAccount, client) 
    await sendAsset(voterAccount, voterAccount, returnedIDs.ballotID, 0, client)
    console.groupEnd(chalk.blueBright("OPTIN BALLOT (VOTER->ALGORAND)"))
 
-   console.group(chalk.blueBright("REGISTRATION REQUEST (VOTER->EA)"))
-   //TODO: per ora assumo che in qualche modo viene inviata una richiesta che è poi elaborata asyncronamente dall'EA ed RA
-   console.groupEnd(chalk.blueBright("REGISTRATION REQUEST (VOTER->EA)"))
+   console.group(chalk.blueBright("IDENTITY CONFIRMATION REQUEST (VOTER->EA)"))
+   // send mail to ea containing personal information in order to confirm the identity of the account
+   await sendIdentityInformation(eamail, votermail, returnedIDs.appID, voterAccount.addr, payload)
+   
+   
+   console.groupEnd(chalk.blueBright("IDENTITY CONFIRMATION REQUEST (VOTER->EA)"))
 
 }
 
