@@ -1,13 +1,12 @@
-import algosdk from 'algosdk';
 import dotenv from 'dotenv';
 import chalk from 'chalk';
 import fetch from 'node-fetch';
 import nacl from "tweetnacl";
 const { box } = nacl;
 import naclutils from 'tweetnacl-util';
-const { decodeUTF8, encodeUTF8, encodeBase64, decodeBase64 } = naclutils;
+const { decodeBase64 } = naclutils;
 
-import { getBallotID, getElectionAuthorityAddress, getTallyKey, decrypt} from './utils.js';
+import { getBallotID, getTallyKey, decrypt } from '../utils/utils.js';
 
 
 dotenv.config()
@@ -32,9 +31,8 @@ export const computeResults = async (appID, client) => {
     // Get tally key
     const tallykey = await getTallyKey(appID, client)
 
-   console.groupEnd(chalk.blueBright("GET SMART CONTRACT INFO (ANY USER)"))
+    console.groupEnd(chalk.blueBright("GET SMART CONTRACT INFO (ANY USER)"))
 
-    
 
     // Get the voters address from the ASA
 
@@ -50,7 +48,7 @@ export const computeResults = async (appID, client) => {
 
     data['balances'].forEach(entry => {
 
-        if (entry['amount'] == 2) {
+        if (entry['amount'] == 2) {// only save address of voters who correctly voted
             votersAddress.push(entry['address'])
         }
     });
@@ -62,12 +60,12 @@ export const computeResults = async (appID, client) => {
 
     // Get the encrypted vote for each voter account, decrypt the vote and update the vote counter
 
-    
+
 
     console.group(chalk.blueBright("TALLY VOTES (ANY USER)"))
 
-    for(const voterAddr of votersAddress ){
-        
+    for (const voterAddr of votersAddress) {
+
         let encryptedVote = undefined
         let voterPublicKey = undefined
         let accountInfoResponse = await client.accountInformation(voterAddr).do();
@@ -98,25 +96,28 @@ export const computeResults = async (appID, client) => {
 
         // decrypt vote
 
-        const uint8voterpubkey = decodeBase64(voterPublicKey)
-        const uint8tallykey = decodeBase64(tallykey)
+        if (voterPublicKey != undefined) { // this check is useless because the smart contract will only assign 2 ballot if the keys are correctly setted up
+            const uint8voterpubkey = decodeBase64(voterPublicKey)
+            const uint8tallykey = decodeBase64(tallykey)
 
-        const decryptionSharedKey = box.before(uint8voterpubkey, uint8tallykey)
-        const decryptedVote = decrypt(decryptionSharedKey, encryptedVote)
+            const decryptionSharedKey = box.before(uint8voterpubkey, uint8tallykey)
+            const decryptedVote = decrypt(decryptionSharedKey, encryptedVote)
 
 
-        let found = false;
-        for(const item of tallyedResults){
-            
-            if(item[0]['candidate_id'] == decryptedVote['candidate_id']){
-                found = true;
-                tallyedResults.set(item[0], item[1]+1)
-                break;
+            let found = false;
+            for (const item of tallyedResults) {
+
+                if (item[0]['candidate_id'] == decryptedVote['candidate_id']) {
+                    found = true;
+                    tallyedResults.set(item[0], item[1] + 1)
+                    break;
+                }
+            }
+            if (!found) {
+                tallyedResults.set(decryptedVote, 1)
             }
         }
-        if(!found){
-            tallyedResults.set(decryptedVote, 1)
-        } 
+
     }
 
     console.log(tallyedResults)

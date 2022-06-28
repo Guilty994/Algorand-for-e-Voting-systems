@@ -7,8 +7,8 @@ dotenv.config()
 
 export const acceptRegistration = async (electAuthAccount, voterAddress, appID, ballotID, voterMail, client) => {
 
-    // Accept
 
+    // Accept
     console.group(chalk.blueBright("CONFIRM VOTER IDENTITY (EA->SC)"))
     await confirmIdentity(electAuthAccount, voterAddress, appID, ballotID, client)
 

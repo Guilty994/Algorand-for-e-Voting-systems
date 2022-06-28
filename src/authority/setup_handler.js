@@ -193,9 +193,9 @@ export const setupElection = async(RegBegin, RegEnd, VoteBegin, VoteEnd, electAu
 
 
     // Optin into ballots
-    console.group(chalk.blue("OPTIN ASSET \"BALLOTS\" (EA->SC)"))
+    console.group(chalk.blue("OPTIN ASSET \"BALLOTS\" (SC->ALGORAND)"))
     await smartContractOptinAsset(electAuthAccount, appID, ballotID, client)
-    console.groupEnd("OPTIN ASSET \"BALLOTS\" (EA->SC)")
+    console.groupEnd("OPTIN ASSET \"BALLOTS\" (SC->ALGORAND)")
     console.group(chalk.blue("OPTIN ASSET \"BALLOTS\" (EA->ALGORAND)"))
     await sendAsset(electAuthAccount, electAuthAccount, ballotID, 0, client)
     console.groupEnd("OPTIN ASSET \"BALLOTS\" (EA->ALGORAND)")

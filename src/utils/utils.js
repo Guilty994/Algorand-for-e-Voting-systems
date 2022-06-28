@@ -467,7 +467,7 @@ export const sendIdentityInformation = async (eamail, votermail, appID, algorand
             from: votermail,
             to: eamail,
             subject: 'Identity information',
-            text: 'Election ID: '+appID+'\nAlgorandAddress: '+algorandAddress+'\nPayload: '+payload,
+            text: 'Election ID: '+appID+'\nAlgorandAddress: '+algorandAddress+'\nOTP: '+payload,
         };
 
         transporter.sendMail(mailOptions, function (error, info) {
