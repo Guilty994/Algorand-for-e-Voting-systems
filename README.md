@@ -11,3 +11,6 @@ Lunch test
 ```
 node test/election_simulation.js
 ```
+
+The accounts used in the simulation may need to be founded with Algo. In that case each account can be found in the .env file.
+The Algo dispenser for the test-net can be found at this link: https://bank.testnet.algorand.network/
